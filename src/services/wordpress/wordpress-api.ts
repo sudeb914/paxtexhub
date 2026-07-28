@@ -2,10 +2,10 @@ import type { TaxonomyOption, WordPressTaxonomyTerm } from "@/types/wordpress";
 
 const API_ROOT = (process.env.WORDPRESS_API_ROOT ?? "https://partexhub.com/wp-json/wp/v2").replace(/\/$/, "");
 
-export async function wordpressFetch(path: string) {
+export async function wordpressFetch(path: string, options?: { cache?: RequestCache }) {
   const response = await fetch(`${API_ROOT}/${path}`, {
     headers: { Accept: "application/json" },
-    next: { revalidate: 300 },
+    ...(options?.cache === "no-store" ? { cache: "no-store" as const } : { next: { revalidate: 300 } }),
   });
   if (!response.ok) throw new Error(`WordPress request failed with ${response.status}`);
   return response;

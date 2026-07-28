@@ -9,7 +9,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { getWordPressHomeData } from "@/services/wordpress/wordpress-home-service";
 import type { WordPressHomeData } from "@/services/wordpress/wordpress-home-service";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Find Your Dream Car",
