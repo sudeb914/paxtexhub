@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Mail, Pencil, ShieldCheck } from "lucide-react";
 import { Avatar } from "@/components/dashboard/Avatar";
+import type { ProfileCompletion } from "@/lib/profile-completion";
 
 export interface DashboardSeller {
   displayName: string;
   role: string;
   email?: string | null;
   profileImage?: string | null;
+  profileCompletion: ProfileCompletion;
 }
 
 export function ProfileCard({ seller }: { seller: DashboardSeller }) {

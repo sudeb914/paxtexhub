@@ -5,6 +5,8 @@ import { getAuthenticatedWordPressUser, WordPressAuthError } from "@/services/wo
 import { createAuthenticatedWordPressListing, WordPressListingCreateError } from "@/services/wordpress/wordpress-create-listing-service";
 import { uploadAuthenticatedWordPressImage, WordPressMediaUploadError } from "@/services/wordpress/wordpress-media-service";
 import type { CreateListingResponse } from "@/types/create-listing";
+import { getWordPressProfile, WordPressProfileError } from "@/services/wordpress/wordpress-profile-service";
+import { calculateProfileCompletion } from "@/lib/profile-completion";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,17 @@ function validateImage(value: FormDataEntryValue | null, field: string, required
 export async function POST(request: Request) {
   const token = (await cookies()).get("partexhub_token")?.value;
   if (!token) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+
+  try {
+    const completion = calculateProfileCompletion(await getWordPressProfile(token));
+    if (!completion.isComplete) {
+      return NextResponse.json({ error: "Complete your seller profile before adding a listing.", code: "PROFILE_INCOMPLETE", profileCompletion: completion }, { status: 403 });
+    }
+  } catch (error) {
+    if (error instanceof WordPressProfileError && error.status === 401) return NextResponse.json({ error: "Your session is invalid or expired." }, { status: 401 });
+    if (error instanceof WordPressProfileError) return NextResponse.json({ error: "Unable to verify your profile. Please try again." }, { status: error.status });
+    return NextResponse.json({ error: "Unable to verify your profile. Please try again." }, { status: 500 });
+  }
 
   let formData: FormData;
   try { formData = await request.formData(); } catch { return NextResponse.json({ error: "Invalid form data." }, { status: 400 }); }

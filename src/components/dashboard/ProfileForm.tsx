@@ -5,6 +5,8 @@ import { CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ProfilePhotoUploader } from "@/components/dashboard/ProfilePhotoUploader";
 import type { BusinessType, SellerProfileResponse } from "@/types/seller-profile";
+import { calculateProfileCompletion } from "@/lib/profile-completion";
+import { ProfileCompletionAlert } from "@/components/dashboard/ProfileCompletionAlert";
 
 type EditableProfile = Omit<SellerProfileResponse, "id">;
 type Errors = Partial<Record<keyof EditableProfile, string>>;
@@ -16,6 +18,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: SellerProfileR
   const editable = useMemo(() => { const { id: _id, ...profile } = initialProfile; void _id; return profile; }, [initialProfile]);
   const [saved, setSaved] = useState(editable); const [form, setForm] = useState(editable); const [photoFile, setPhotoFile] = useState<File | null>(null); const [errors, setErrors] = useState<Errors>({}); const [generalError, setGeneralError] = useState(""); const [saving, setSaving] = useState(false); const [success, setSuccess] = useState(false);
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(saved) || Boolean(photoFile), [form, saved, photoFile]);
+  const completion = useMemo(() => calculateProfileCompletion(form), [form]);
   function update<K extends keyof EditableProfile>(key: K, value: EditableProfile[K]) { setForm((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: undefined })); setGeneralError(""); setSuccess(false); }
   function validate() {
     const next: Errors = {}; const required: Array<keyof EditableProfile> = ["firstName", "lastName", "displayName", "email"];
@@ -50,6 +53,7 @@ export function ProfileForm({ initialProfile }: { initialProfile: SellerProfileR
   function cancel() { setForm(saved); setPhotoFile(null); setErrors({}); setGeneralError(""); setSuccess(false); }
 
   return <form onSubmit={submit}>
+    <div className="mb-8"><ProfileCompletionAlert compact completion={completion} /></div>
     <ProfilePhotoUploader image={form.profileImage} name={form.displayName} onChange={(image) => update("profileImage", image)} onFileChange={setPhotoFile} />
     {success ? <div className="mx-auto mt-6 flex max-w-md items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700" role="status"><CheckCircle2 className="size-5" />Profile changes saved successfully.</div> : null}
     {generalError ? <div className="mx-auto mt-6 max-w-xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700" role="alert">{generalError}</div> : null}
