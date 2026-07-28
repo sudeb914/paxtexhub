@@ -8,6 +8,7 @@ function partexhub_msg_tables() {
     return array(
         'conversations' => $wpdb->prefix . 'jet_cct_conversations',
         'messages'      => $wpdb->prefix . 'jet_cct_messages',
+        'reactions'     => $wpdb->prefix . 'jet_cct_message_reactions',
     );
 }
 
@@ -78,6 +79,33 @@ function partexhub_msg_get_owned_conversation($conversation_id, $user_id) {
     return $row;
 }
 
+function partexhub_msg_excerpt($message) {
+    $message = trim(wp_strip_all_tags((string) $message));
+    return mb_strlen($message) > 140 ? mb_substr($message, 0, 137) . '...' : $message;
+}
+
+function partexhub_msg_normalize_messages($rows, $current_user_id) {
+    global $wpdb;
+    if (!$rows) return array();
+    $tables = partexhub_msg_tables(); $message_ids = array(); $reply_ids = array();
+    foreach ($rows as $row) { $message_ids[] = absint($row->_ID); if (absint($row->reply_to_message_id ?? 0)) $reply_ids[] = absint($row->reply_to_message_id); }
+    $reply_rows = array();
+    if ($reply_ids) { $ids = implode(',', array_map('absint', array_unique($reply_ids))); foreach ($wpdb->get_results("SELECT _ID,sender_id,message_text,conversation_id FROM {$tables['messages']} WHERE _ID IN ({$ids})") as $reply) $reply_rows[absint($reply->_ID)] = $reply; }
+    $grouped = array();
+    $ids = implode(',', array_map('absint', array_unique($message_ids)));
+    foreach ($wpdb->get_results("SELECT message_id,user_id,reaction FROM {$tables['reactions']} WHERE message_id IN ({$ids})") as $reaction) {
+        $message_id = absint($reaction->message_id); $type = (string) $reaction->reaction;
+        if (!isset($grouped[$message_id][$type])) $grouped[$message_id][$type] = array('type'=>$type,'count'=>0,'reactedByCurrentUser'=>false);
+        $grouped[$message_id][$type]['count']++; if (absint($reaction->user_id) === $current_user_id) $grouped[$message_id][$type]['reactedByCurrentUser'] = true;
+    }
+    return array_map(function($row) use ($reply_rows, $grouped) {
+        $id = absint($row->_ID); $reply_id = absint($row->reply_to_message_id ?? 0); $reply = $reply_rows[$reply_id] ?? null;
+        $reply_data = null;
+        if ($reply_id) $reply_data = $reply && absint($reply->conversation_id) === absint($row->conversation_id) ? array('id'=>$reply_id,'senderId'=>absint($reply->sender_id),'message'=>partexhub_msg_excerpt($reply->message_text)) : array('id'=>$reply_id,'senderId'=>0,'message'=>'Original message unavailable');
+        return array('id'=>$id,'conversationId'=>absint($row->conversation_id),'senderId'=>absint($row->sender_id),'receiverId'=>absint($row->receiver_id),'messageText'=>(string)$row->message_text,'isRead'=>(bool)$row->is_read,'sentAt'=>partexhub_msg_time($row->sent_at),'messageType'=>(string)($row->message_type ?: 'text'),'replyTo'=>$reply_data,'reactions'=>array_values($grouped[$id] ?? array()));
+    }, $rows);
+}
+
 function partexhub_get_conversations() {
     global $wpdb;
     $ready = partexhub_msg_tables_ready(); if (is_wp_error($ready)) return $ready;
@@ -115,7 +143,7 @@ function partexhub_get_conversation(WP_REST_Request $request) {
     $table = partexhub_msg_tables()['messages'];
     $total = absint($wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE conversation_id=%d", $conversation_id)));
     $rows = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE conversation_id=%d ORDER BY sent_at ASC, _ID ASC LIMIT %d OFFSET %d", $conversation_id, $per_page, $offset));
-    $messages = array_map(function($row) { return array('id'=>absint($row->_ID),'conversationId'=>absint($row->conversation_id),'senderId'=>absint($row->sender_id),'receiverId'=>absint($row->receiver_id),'messageText'=>(string)$row->message_text,'isRead'=>(bool)$row->is_read,'sentAt'=>partexhub_msg_time($row->sent_at),'messageType'=>(string)($row->message_type ?: 'text')); }, $rows);
+    $messages = partexhub_msg_normalize_messages($rows, $user_id);
     $summary = partexhub_msg_conversation_row($conversation, $user_id); $summary['currentUserId'] = $user_id;
     return rest_ensure_response(array('conversation'=>$summary,'messages'=>$messages,'pagination'=>array('page'=>$page,'perPage'=>$per_page,'total'=>$total,'totalPages'=>(int)ceil($total/$per_page))));
 }
@@ -128,19 +156,58 @@ function partexhub_send_message(WP_REST_Request $request) {
     $message = trim(sanitize_textarea_field((string)$request->get_param('message_text')));
     if ($message === '') return new WP_Error('partexhub_empty_message', 'Message cannot be empty.', array('status'=>400));
     if (mb_strlen($message) > 3000) return new WP_Error('partexhub_message_too_long', 'Message cannot exceed 3000 characters.', array('status'=>400));
+    $reply_id = absint($request->get_param('reply_to_message_id'));
+    $reply = null;
+    if ($reply_id) { $reply = $wpdb->get_row($wpdb->prepare("SELECT * FROM " . partexhub_msg_tables()['messages'] . " WHERE _ID=%d", $reply_id)); if (!$reply || absint($reply->conversation_id) !== $conversation_id) return new WP_Error('partexhub_invalid_reply', 'The replied-to message is not part of this conversation.', array('status'=>400)); }
     $rate_key = 'partexhub_msg_rate_' . $user_id;
     if (get_transient($rate_key)) return new WP_Error('partexhub_rate_limit', 'Please wait before sending another message.', array('status'=>429));
     set_transient($rate_key, 1, 1);
     $receiver_id = $user_id === absint($conversation->buyer_id) ? absint($conversation->seller_id) : absint($conversation->buyer_id);
     $now = current_time('mysql', true); $messages = partexhub_msg_tables()['messages']; $conversations = partexhub_msg_tables()['conversations'];
     $wpdb->query('START TRANSACTION');
-    $inserted = $wpdb->insert($messages, array('cct_status'=>'publish','cct_author_id'=>$user_id,'cct_created'=>$now,'cct_modified'=>$now,'conversation_id'=>$conversation_id,'sender_id'=>$user_id,'receiver_id'=>$receiver_id,'message_text'=>$message,'is_read'=>0,'sent_at'=>$now,'message_type'=>'text'), array('%s','%d','%s','%s','%d','%d','%d','%s','%d','%s','%s'));
+    $inserted = $wpdb->insert($messages, array('cct_status'=>'publish','cct_author_id'=>$user_id,'cct_created'=>$now,'cct_modified'=>$now,'conversation_id'=>$conversation_id,'sender_id'=>$user_id,'receiver_id'=>$receiver_id,'message_text'=>$message,'is_read'=>0,'sent_at'=>$now,'message_type'=>'text','reply_to_message_id'=>$reply_id), array('%s','%d','%s','%s','%d','%d','%d','%s','%d','%s','%s','%d'));
     if (!$inserted) { $wpdb->query('ROLLBACK'); delete_transient($rate_key); return new WP_Error('partexhub_send_failed', 'Message could not be sent.', array('status'=>500)); }
     $message_id = absint($wpdb->insert_id); $counter = $receiver_id === absint($conversation->buyer_id) ? 'buyer_unread_count' : 'seller_unread_count';
     $updated = $wpdb->query($wpdb->prepare("UPDATE {$conversations} SET last_message=%s,last_message_time=%s,cct_modified=%s,{$counter}=COALESCE({$counter},0)+1 WHERE _ID=%d", $message, $now, $now, $conversation_id));
     if ($updated === false) { $wpdb->query('ROLLBACK'); delete_transient($rate_key); return new WP_Error('partexhub_send_failed', 'Message could not be sent.', array('status'=>500)); }
     $wpdb->query('COMMIT');
-    return new WP_REST_Response(array('message'=>array('id'=>$message_id,'conversationId'=>$conversation_id,'senderId'=>$user_id,'receiverId'=>$receiver_id,'messageText'=>$message,'isRead'=>false,'sentAt'=>partexhub_msg_time($now),'messageType'=>'text')), 201);
+    $created = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$messages} WHERE _ID=%d", $message_id));
+    return new WP_REST_Response(array('message'=>partexhub_msg_normalize_messages(array($created), $user_id)[0]), 201);
+}
+
+function partexhub_message_reaction_context($message_id, $user_id) {
+    global $wpdb; $tables = partexhub_msg_tables();
+    $message = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tables['messages']} WHERE _ID=%d", $message_id));
+    if (!$message) return new WP_Error('partexhub_message_missing', 'Message not found.', array('status'=>404));
+    $conversation = partexhub_msg_get_owned_conversation(absint($message->conversation_id), $user_id); if (is_wp_error($conversation)) return $conversation;
+    return $message;
+}
+
+function partexhub_message_reactions_for($message, $user_id) { $normalized = partexhub_msg_normalize_messages(array($message), $user_id); return $normalized[0]['reactions']; }
+
+function partexhub_set_message_reaction(WP_REST_Request $request) {
+    global $wpdb; $ready = partexhub_msg_tables_ready(); if (is_wp_error($ready)) return $ready;
+    $user_id = get_current_user_id(); $message_id = absint($request['id']); $reaction = sanitize_key((string)$request->get_param('reaction')); $allowed = array('like','love','laugh','wow','sad');
+    if (!in_array($reaction, $allowed, true)) return new WP_Error('partexhub_invalid_reaction', 'Unsupported reaction.', array('status'=>400));
+    $message = partexhub_message_reaction_context($message_id, $user_id); if (is_wp_error($message)) return $message;
+    $table = partexhub_msg_tables()['reactions']; $existing_ids = $wpdb->get_col($wpdb->prepare("SELECT _ID FROM {$table} WHERE message_id=%d AND user_id=%d ORDER BY _ID ASC", $message_id, $user_id)); $existing = absint($existing_ids[0] ?? 0); $now = current_time('mysql', true);
+    if ($existing) { $ok = $wpdb->update($table, array('reaction'=>$reaction,'cct_modified'=>$now), array('_ID'=>$existing), array('%s','%s'), array('%d')); if (count($existing_ids) > 1) { $duplicates = implode(',', array_map('absint', array_slice($existing_ids, 1))); $wpdb->query("DELETE FROM {$table} WHERE _ID IN ({$duplicates})"); } }
+    else $ok = $wpdb->insert($table, array('cct_status'=>'publish','cct_author_id'=>$user_id,'cct_created'=>$now,'cct_modified'=>$now,'message_id'=>$message_id,'user_id'=>$user_id,'reaction'=>$reaction), array('%s','%d','%s','%s','%d','%d','%s'));
+    if ($ok === false) return new WP_Error('partexhub_reaction_failed', 'Reaction could not be updated.', array('status'=>500));
+    return rest_ensure_response(array('reactions'=>partexhub_message_reactions_for($message, $user_id)));
+}
+
+function partexhub_delete_message_reaction(WP_REST_Request $request) {
+    global $wpdb; $ready = partexhub_msg_tables_ready(); if (is_wp_error($ready)) return $ready;
+    $user_id = get_current_user_id(); $message_id = absint($request['id']); $message = partexhub_message_reaction_context($message_id, $user_id); if (is_wp_error($message)) return $message;
+    $wpdb->delete(partexhub_msg_tables()['reactions'], array('message_id'=>$message_id,'user_id'=>$user_id), array('%d','%d'));
+    return rest_ensure_response(array('reactions'=>partexhub_message_reactions_for($message, $user_id)));
+}
+
+function partexhub_profile_preview(WP_REST_Request $request) {
+    $user = get_userdata(absint($request['id'])); if (!$user) return new WP_Error('partexhub_user_missing', 'Profile not found.', array('status'=>404));
+    $meta = function($key) use ($user) { return trim((string)get_user_meta($user->ID, $key, true)); }; $phone_setting = strtolower($meta('phone_number_public')); $public_phone = in_array($phone_setting, array('yes','1','true'), true) ? $meta('phone_number') : null; $bio = $meta('bio') ?: $user->description;
+    return rest_ensure_response(array('id'=>$user->ID,'displayName'=>$user->display_name,'profilePhotoUrl'=>partexhub_msg_avatar($user->ID),'roleLabel'=>in_array('seller',(array)$user->roles,true)?'Seller':'Marketplace Member','companyName'=>$meta('company_name'),'businessType'=>$meta('business_type'),'city'=>$meta('city'),'country'=>$meta('country'),'bioExcerpt'=>partexhub_msg_excerpt($bio),'phone'=>$public_phone ?: null,'publicProfileUrl'=>'/sellers/'.$user->user_nicename));
 }
 
 function partexhub_read_conversation(WP_REST_Request $request) {
@@ -173,4 +240,9 @@ add_action('rest_api_init', function() {
     register_rest_route('partexhub/v1', '/conversations/(?P<id>\d+)/send', array('methods'=>WP_REST_Server::CREATABLE,'callback'=>'partexhub_send_message','permission_callback'=>$permission));
     register_rest_route('partexhub/v1', '/conversations/(?P<id>\d+)/read', array('methods'=>WP_REST_Server::CREATABLE,'callback'=>'partexhub_read_conversation','permission_callback'=>$permission));
     register_rest_route('partexhub/v1', '/notifications', array('methods'=>WP_REST_Server::READABLE,'callback'=>'partexhub_message_notifications','permission_callback'=>$permission));
+    register_rest_route('partexhub/v1', '/messages/(?P<id>\d+)/reaction', array(
+        array('methods'=>WP_REST_Server::CREATABLE,'callback'=>'partexhub_set_message_reaction','permission_callback'=>$permission),
+        array('methods'=>WP_REST_Server::DELETABLE,'callback'=>'partexhub_delete_message_reaction','permission_callback'=>$permission),
+    ));
+    register_rest_route('partexhub/v1', '/users/(?P<id>\d+)/profile-preview', array('methods'=>WP_REST_Server::READABLE,'callback'=>'partexhub_profile_preview','permission_callback'=>$permission));
 });

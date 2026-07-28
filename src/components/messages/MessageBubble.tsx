@@ -1,0 +1,26 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { MessageSquareReply, SmilePlus } from "lucide-react";
+import type { ChatMessage, ReactionType, ReplyPreview } from "@/types/messaging";
+
+const reactions: Array<{ type: ReactionType; symbol: string; label: string }> = [
+  { type: "like", symbol: "👍", label: "Like" }, { type: "love", symbol: "❤️", label: "Love" }, { type: "laugh", symbol: "😂", label: "Laugh" }, { type: "wow", symbol: "😮", label: "Wow" }, { type: "sad", symbol: "😢", label: "Sad" },
+];
+export function MessageBubble({ message, own, time, highlighted, onReply, onReact, onReplyClick }: { message: ChatMessage; own: boolean; time: string; highlighted: boolean; onReply: (reply: ReplyPreview) => void; onReact: (messageId: number, reaction: ReactionType, remove: boolean) => void; onReplyClick: (id: number) => void }) {
+  const [actionsOpen, setActionsOpen] = useState(false); const [pickerOpen, setPickerOpen] = useState(false); const menu = useRef<HTMLDivElement>(null);
+  useEffect(() => { function outside(event: MouseEvent) { if (!menu.current?.contains(event.target as Node)) { setActionsOpen(false); setPickerOpen(false); } } document.addEventListener("mousedown", outside); return () => document.removeEventListener("mousedown", outside); }, []);
+  const numericId = Number(message.id); const canAct = Number.isInteger(numericId) && !message.optimistic;
+  return <div className={`group flex transition ${own ? "justify-end" : "justify-start"} ${highlighted ? "rounded-xl bg-amber-100/80 py-1 ring-2 ring-amber-300" : ""}`} id={`message-${message.id}`}>
+    <div className={`flex max-w-[88%] items-end gap-1 sm:max-w-[72%] ${own ? "flex-row-reverse" : ""}`}>
+      <button aria-expanded={actionsOpen} aria-label="Message actions" className="mb-1 grid size-8 shrink-0 place-items-center rounded-full text-[#738198] opacity-100 transition hover:bg-white hover:text-[#0864ff] sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100" disabled={!canAct} onClick={() => setActionsOpen((value) => !value)} type="button"><SmilePlus className="size-4"/></button>
+      <div className="relative" ref={menu}>
+        {actionsOpen ? <div className={`absolute bottom-full z-20 mb-2 flex items-center gap-1 rounded-xl border border-[#e2e7ee] bg-white p-1.5 shadow-xl ${own ? "right-0" : "left-0"}`}><button aria-label="Reply to message" className="grid size-9 place-items-center rounded-lg text-[#52627a] hover:bg-blue-50 hover:text-[#0864ff]" onClick={() => { onReply({ id: numericId, senderId: message.senderId, message: message.messageText.slice(0, 140) }); setActionsOpen(false); }} type="button"><MessageSquareReply className="size-4"/></button><button aria-label="Add reaction" className="grid size-9 place-items-center rounded-lg text-lg hover:bg-blue-50" onClick={() => setPickerOpen((value) => !value)} type="button">😊</button>{pickerOpen ? <div className={`absolute bottom-full mb-2 flex rounded-full border border-[#e2e7ee] bg-white p-1 shadow-xl ${own ? "right-0" : "left-8"}`}>{reactions.map((reaction) => <button aria-label={`React with ${reaction.label}`} className="grid size-9 place-items-center rounded-full text-lg transition hover:scale-110 hover:bg-slate-100" key={reaction.type} onClick={() => { const selected = message.reactions.some((item) => item.type === reaction.type && item.reactedByCurrentUser); onReact(numericId, reaction.type, selected); setActionsOpen(false); setPickerOpen(false); }} title={reaction.label} type="button">{reaction.symbol}</button>)}</div> : null}</div> : null}
+        <div className={`rounded-2xl px-4 py-2.5 text-sm leading-6 shadow-sm ${own ? "rounded-br-md bg-[#0864ff] text-white" : "rounded-bl-md bg-white text-[#26344b]"}`}>
+          {message.replyTo ? <button className={`mb-2 block w-full rounded-lg border-l-2 px-3 py-2 text-left text-xs ${own ? "border-white/70 bg-white/15 text-blue-50" : "border-[#0864ff] bg-slate-100 text-[#617088]"}`} onClick={() => onReplyClick(message.replyTo!.id)} type="button"><span className="block truncate">{message.replyTo.message || "Original message unavailable"}</span></button> : null}
+          <p className="whitespace-pre-wrap break-words">{message.messageText}</p><p className={`mt-1 text-right text-[10px] ${own ? "text-blue-100" : "text-[#8b96a7]"}`}>{time}{message.optimistic ? " · Sending…" : own && message.isRead ? " · Read" : ""}</p>
+        </div>
+        {message.reactions.length ? <div className={`mt-1 flex flex-wrap gap-1 ${own ? "justify-end" : "justify-start"}`}>{message.reactions.map((item) => { const reaction = reactions.find((candidate) => candidate.type === item.type); return <button aria-label={`${reaction?.label ?? item.type}${item.reactedByCurrentUser ? ", selected" : ""}`} className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 text-xs shadow-sm ${item.reactedByCurrentUser ? "border-blue-300 bg-blue-50 text-[#0864ff]" : "border-[#e1e6ed] bg-white text-[#52627a]"}`} key={item.type} onClick={() => onReact(numericId, item.type, item.reactedByCurrentUser)} type="button"><span>{reaction?.symbol}</span>{item.count > 1 ? <span>{item.count}</span> : null}</button>; })}</div> : null}
+      </div>
+    </div>
+  </div>;
+}
