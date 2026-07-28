@@ -9,7 +9,7 @@ export function Header({ displayName, profileImage, compact, onMenuClick }: { di
   const [open, setOpen] = useState(false);
   const { isLoggingOut, logoutError, logout } = useLogout();
   return (
-    <header className={`fixed left-0 right-0 top-0 z-30 flex h-[116px] items-center border-b border-[#edf0f4] bg-white px-6 transition-[left] duration-300 sm:px-10 ${compact ? "lg:left-24" : "lg:left-[342px]"}`}>
+    <header className={`fixed left-0 right-0 top-0 z-30 flex h-[96px] min-w-0 items-center border-b border-[#edf0f4] bg-white px-4 transition-[left] duration-300 sm:h-[116px] sm:px-10 ${compact ? "lg:left-24" : "lg:left-[342px]"}`}>
       <button aria-label="Toggle sidebar" className="grid size-11 place-items-center rounded-lg text-[#283a55] transition hover:bg-slate-50" onClick={onMenuClick} type="button"><Menu className="size-7 stroke-[1.7]" /></button>
       <div className="relative ml-auto">
         <button aria-expanded={open} aria-haspopup="menu" className="flex items-center gap-4 rounded-xl px-2 py-2 transition hover:bg-slate-50" onClick={() => setOpen((value) => !value)} type="button">

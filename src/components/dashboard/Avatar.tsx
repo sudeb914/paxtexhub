@@ -9,17 +9,17 @@ export interface DashboardAvatarProps {
 }
 
 export function Avatar({ profileImage, name, size = "small", className = "" }: DashboardAvatarProps) {
-  const dimensions = size === "large" ? "size-[152px]" : "size-14";
+  const dimensions = size === "large" ? "size-[120px] sm:size-[136px] lg:size-[152px]" : "size-14";
   const padding = "p-1";
 
   return (
     <div className={`shrink-0 rounded-full bg-gradient-to-br from-[#0864ff] via-[#38bdf8] to-[#4f46e5] shadow-[0_6px_20px_rgba(8,100,255,0.2)] ${dimensions} ${padding} ${className}`}>
       <div className="relative size-full overflow-hidden rounded-full border border-white bg-slate-100">
         {profileImage ? (
-          <Image alt={`${name} profile`} className="object-cover" fill sizes={size === "large" ? "142px" : "46px"} src={profileImage} unoptimized />
+          <Image alt={`${name} profile`} className="object-cover" fill sizes={size === "large" ? "(min-width: 1024px) 142px, (min-width: 640px) 126px, 110px" : "46px"} src={profileImage} unoptimized />
         ) : (
           <div className="grid size-full place-items-center bg-[radial-gradient(circle_at_38%_25%,#f8fafc_0%,#e9edf3_58%,#dfe4eb_100%)] text-slate-500">
-            <UserRound aria-hidden="true" className={size === "large" ? "size-[88px] stroke-[1.25]" : "size-7 stroke-[1.35]"} fill="currentColor" fillOpacity=".22" />
+            <UserRound aria-hidden="true" className={size === "large" ? "size-[70px] stroke-[1.25] sm:size-[80px] lg:size-[88px]" : "size-7 stroke-[1.35]"} fill="currentColor" fillOpacity=".22" />
           </div>
         )}
       </div>
