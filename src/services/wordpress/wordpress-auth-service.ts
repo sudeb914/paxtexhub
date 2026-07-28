@@ -42,7 +42,7 @@ export async function getAuthenticatedWordPressUser(token: string): Promise<Auth
   if (typeof data.id !== "number") throw new WordPressAuthError(502, "WordPress returned an invalid user response");
 
   const username = typeof data.username === "string" && data.username ? data.username : typeof data.slug === "string" ? data.slug : "";
-  const displayName = typeof data.name === "string" && data.name ? data.name : username;
+  const displayName = typeof data.name === "string" ? data.name.trim() : "";
   const roles = Array.isArray(data.roles) ? data.roles.filter((role): role is string => typeof role === "string") : [];
 
   return {

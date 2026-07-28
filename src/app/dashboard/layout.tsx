@@ -15,7 +15,7 @@ export default async function DashboardRouteGuard({ children }: Readonly<{ child
     redirect("/login");
   }
   const seller = {
-    username: user.displayName || user.username,
+    displayName: user.displayName || "Seller",
     role: user.role,
     email: user.email,
     profileImage: null,
