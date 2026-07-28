@@ -25,12 +25,23 @@ export interface WordPressUser {
   name: string;
   link: string;
   slug: string;
+  description?: string;
+  url?: string;
   avatar_urls?: Record<string, string>;
   meta?: {
     profile_picture?: string | number;
     company_name?: string;
     business_type?: string;
     bio?: string;
+    country?: string;
+    city?: string;
+    website?: string;
+    phone?: string;
+    phone_number_public?: string | boolean;
+    facebook?: string;
+    instagram?: string;
+    linkedin?: string;
+    youtube?: string;
   };
 }
 

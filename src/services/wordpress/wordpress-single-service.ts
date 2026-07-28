@@ -42,7 +42,7 @@ async function getSeller(post: WordPressCarListing): Promise<Seller | null> {
       avatarUrl,
       memberSince: "",
       subtitle: companyName || "Verified WordPress seller",
-      profileUrl: user.link,
+      profileUrl: `/sellers/${user.slug}`,
     };
   } catch {
     return null;
