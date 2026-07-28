@@ -1,0 +1,133 @@
+/**
+ * PartexHub public seller registration endpoint.
+ * Code Snippets: add as a PHP snippet and run everywhere.
+ * Do not include an opening <?php tag when pasting into Code Snippets.
+ */
+
+add_action( 'rest_api_init', function () {
+	register_rest_route( 'partexhub/v1', '/register', array(
+		'methods'             => WP_REST_Server::CREATABLE,
+		'callback'            => 'partexhub_snippet_register_seller',
+		'permission_callback' => '__return_true',
+	) );
+} );
+
+function partexhub_snippet_registration_error( $code, $message, $field, $status = 400 ) {
+	return new WP_Error(
+		$code,
+		$message,
+		array(
+			'status'       => $status,
+			'field_errors' => array( $field => $message ),
+		)
+	);
+}
+
+function partexhub_snippet_unique_username( $email, $display_name ) {
+	$email_prefix = strstr( $email, '@', true );
+	$base          = sanitize_user( strtolower( $email_prefix ? $email_prefix : $display_name ), true );
+
+	if ( '' === $base ) {
+		$base = 'seller';
+	}
+
+	$base = substr( $base, 0, 48 );
+
+	if ( ! username_exists( $base ) ) {
+		return $base;
+	}
+
+	for ( $attempt = 0; $attempt < 20; $attempt++ ) {
+		$candidate = $base . wp_rand( 100, 9999 );
+
+		if ( ! username_exists( $candidate ) ) {
+			return $candidate;
+		}
+	}
+
+	return $base . time();
+}
+
+function partexhub_snippet_register_seller( WP_REST_Request $request ) {
+	$first_name       = trim( preg_replace( '/\s+/', ' ', sanitize_text_field( $request->get_param( 'first_name' ) ) ) );
+	$last_name        = trim( preg_replace( '/\s+/', ' ', sanitize_text_field( $request->get_param( 'last_name' ) ) ) );
+	$display_name     = trim( $first_name . ' ' . $last_name );
+	$email            = sanitize_email( $request->get_param( 'email' ) );
+	$password         = (string) $request->get_param( 'password' );
+	$confirm_password = (string) $request->get_param( 'confirm_password' );
+	$accept_terms     = rest_sanitize_boolean( $request->get_param( 'accept_terms' ) );
+
+	if ( strlen( $first_name ) < 1 || strlen( $first_name ) > 50 ) {
+		return partexhub_snippet_registration_error( 'invalid_first_name', 'Enter a valid first name.', 'firstName' );
+	}
+
+	if ( strlen( $last_name ) < 1 || strlen( $last_name ) > 50 ) {
+		return partexhub_snippet_registration_error( 'invalid_last_name', 'Enter a valid last name.', 'lastName' );
+	}
+
+	if ( ! is_email( $email ) ) {
+		return partexhub_snippet_registration_error( 'invalid_email', 'Enter a valid email address.', 'email' );
+	}
+
+	if ( email_exists( $email ) ) {
+		return partexhub_snippet_registration_error( 'email_exists', 'An account already exists with this email.', 'email', 409 );
+	}
+
+	if ( strlen( $password ) < 8 || ! preg_match( '/[A-Za-z]/', $password ) || ! preg_match( '/\d/', $password ) ) {
+		return partexhub_snippet_registration_error( 'weak_password', 'Password must be at least 8 characters and contain a letter and a number.', 'password' );
+	}
+
+	if ( ! hash_equals( $password, $confirm_password ) ) {
+		return partexhub_snippet_registration_error( 'password_mismatch', 'Passwords do not match.', 'confirmPassword' );
+	}
+
+	if ( ! $accept_terms ) {
+		return partexhub_snippet_registration_error( 'terms_required', 'You must accept the Terms of Service and Privacy Policy.', 'acceptTerms' );
+	}
+
+	if ( ! get_role( 'seller' ) ) {
+		return new WP_Error(
+			'seller_role_missing',
+			'Seller registration is temporarily unavailable.',
+			array( 'status' => 503 )
+		);
+	}
+
+	$username = partexhub_snippet_unique_username( $email, $display_name );
+	$user_id  = wp_insert_user( array(
+		'user_login'   => $username,
+		'user_email'   => $email,
+		'user_pass'    => $password,
+		'first_name'   => $first_name,
+		'last_name'    => $last_name,
+		'display_name' => $display_name,
+		'role'         => 'seller',
+	) );
+
+	if ( is_wp_error( $user_id ) ) {
+		if ( 'existing_user_email' === $user_id->get_error_code() ) {
+			return partexhub_snippet_registration_error( 'email_exists', 'An account already exists with this email.', 'email', 409 );
+		}
+
+		return new WP_Error(
+			'registration_failed',
+			'Unable to create your seller account.',
+			array( 'status' => 500 )
+		);
+	}
+
+	$user = get_userdata( $user_id );
+
+	return new WP_REST_Response(
+		array(
+			'success' => true,
+			'message' => 'Your seller account has been created.',
+			'user'    => array(
+				'id'          => $user_id,
+				'email'       => $user->user_email,
+				'displayName' => $user->display_name,
+			),
+		),
+		201
+	);
+}

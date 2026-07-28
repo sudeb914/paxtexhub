@@ -7,14 +7,15 @@ export const metadata: Metadata = {
   description: "Log in to AutoHub to manage your car listings, profile, and seller inquiries.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ registered?: string }> }) {
+  const registrationSuccess = (await searchParams).registered === "1";
   return (
     <AuthShell
       eyebrow="Welcome back"
       title="Log in to your account"
       description="Manage your listings, connect with buyers, and keep your AutoHub profile up to date."
     >
-      <LoginForm />
+      <LoginForm registrationSuccess={registrationSuccess} />
     </AuthShell>
   );
 }

@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { FiAlertCircle, FiMail } from "react-icons/fi";
+import { FiAlertCircle, FiCheckCircle, FiMail } from "react-icons/fi";
 import { PasswordInput } from "@/components/auth/password-input";
 
-export function LoginForm() {
+export function LoginForm({ registrationSuccess = false }: { registrationSuccess?: boolean }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -40,6 +40,7 @@ export function LoginForm() {
 
   return (
     <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+      {registrationSuccess ? <div aria-live="polite" className="flex items-start gap-2.5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-5 text-emerald-800" role="status"><FiCheckCircle className="mt-0.5 shrink-0 text-base" aria-hidden="true" /><span>Your seller account has been created. Please log in.</span></div> : null}
       {error ? <div aria-live="polite" className="flex items-start gap-2.5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm leading-5 text-red-700" role="alert"><FiAlertCircle className="mt-0.5 shrink-0 text-base" aria-hidden="true" /><span>{error}</span></div> : null}
       <label className="block text-sm font-semibold">Email or username
         <span className="relative mt-2 block"><FiMail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" /><input autoComplete="username" className="h-11 w-full rounded-md border border-border pl-10 pr-3.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15" disabled={isSubmitting} name="username" placeholder="Email or username" required type="text" /></span>
