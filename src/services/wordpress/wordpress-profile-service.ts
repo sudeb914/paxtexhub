@@ -74,13 +74,34 @@ async function request(token: string, url: string, init?: RequestInit) {
   }
 }
 
+async function getPhoneNumber(token: string) {
+  const response = await request(token, `${baseUrl()}/wp-json/partexhub/v1/profile/phone`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw await errorFrom(response);
+  const body = await response.json() as UnknownRecord;
+  return string(body.phone_number);
+}
+
+async function savePhoneNumber(token: string, phone: string) {
+  const response = await request(token, `${baseUrl()}/wp-json/partexhub/v1/profile/phone`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone_number: phone }) });
+  if (!response.ok) throw await errorFrom(response);
+  const body = await response.json() as UnknownRecord;
+  return string(body.phone_number);
+}
+
 export async function getWordPressProfile(token: string) {
   const custom = await request(token, `${baseUrl()}/wp-json/partexhub/v1/profile`);
-  if (custom.ok) return normalize(token, await custom.json() as UnknownRecord);
+  if (custom.ok) {
+    const profile = await normalize(token, await custom.json() as UnknownRecord);
+    const phone = await getPhoneNumber(token);
+    return phone === null ? profile : { ...profile, phone };
+  }
   if (custom.status !== 404) throw await errorFrom(custom);
   const fallback = await request(token, `${baseUrl()}/wp-json/wp/v2/users/me?context=edit`);
   if (!fallback.ok) throw await errorFrom(fallback);
-  return normalize(token, await fallback.json() as UnknownRecord);
+  const profile = await normalize(token, await fallback.json() as UnknownRecord);
+  const phone = await getPhoneNumber(token);
+  return phone === null ? profile : { ...profile, phone };
 }
 
 export interface ProfileUpdateInput {
@@ -93,12 +114,18 @@ export interface ProfileUpdateInput {
 export async function updateWordPressProfile(token: string, input: ProfileUpdateInput) {
   const customPayload = { first_name: input.firstName, last_name: input.lastName, display_name: input.displayName, email: input.email, phone_number: input.phone, company_name: input.companyName, business_type: input.businessType, website: input.website, bio: input.bio, country: input.country, city: input.city, zip_code: input.zipCode, street_address: input.streetAddress, facebook: input.facebook, instagram: input.instagram, linkedin: input.linkedin, youtube: input.youtube, email_notifications: input.receiveNotifications ? "yes" : "no", marketing_emails: input.marketingEmails ? "yes" : "no", phone_number_public: input.publicPhone ? "yes" : "no", profile_picture: input.profilePhotoId ? String(input.profilePhotoId) : "" };
   const custom = await request(token, `${baseUrl()}/wp-json/partexhub/v1/profile`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(customPayload) });
-  if (custom.ok) return normalize(token, await custom.json() as UnknownRecord);
+  if (custom.ok) {
+    const profile = await normalize(token, await custom.json() as UnknownRecord);
+    const phone = await savePhoneNumber(token, input.phone);
+    return { ...profile, phone };
+  }
   if (custom.status !== 404) throw await errorFrom(custom);
 
   const meta: UnknownRecord = {};
   for (const key of META_KEYS) meta[key] = customPayload[key];
   const fallback = await request(token, `${baseUrl()}/wp-json/wp/v2/users/me`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ first_name: input.firstName, last_name: input.lastName, name: input.displayName, email: input.email, meta }) });
   if (!fallback.ok) throw await errorFrom(fallback);
-  return normalize(token, await fallback.json() as UnknownRecord);
+  const profile = await normalize(token, await fallback.json() as UnknownRecord);
+  const phone = await savePhoneNumber(token, input.phone);
+  return { ...profile, phone };
 }

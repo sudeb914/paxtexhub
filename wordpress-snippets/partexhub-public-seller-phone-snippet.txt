@@ -5,6 +5,40 @@
  */
 
 add_action( 'rest_api_init', function () {
+	register_rest_route( 'partexhub/v1', '/profile/phone', array(
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => function () {
+				return rest_ensure_response( array(
+					'phone_number' => (string) get_user_meta( get_current_user_id(), 'phone_number', true ),
+				) );
+			},
+			'permission_callback' => function () {
+				return get_current_user_id() > 0;
+			},
+		),
+		array(
+			'methods'             => WP_REST_Server::EDITABLE,
+			'callback'            => function ( WP_REST_Request $request ) {
+				$phone = trim( sanitize_text_field( $request->get_param( 'phone_number' ) ) );
+
+				if ( $phone && ( ! preg_match( '/^[+()\-\s\d.]+$/', $phone ) || strlen( preg_replace( '/\D/', '', $phone ) ) < 7 ) ) {
+					return new WP_Error( 'invalid_phone_number', 'Enter a valid phone number.', array( 'status' => 400 ) );
+				}
+
+				update_user_meta( get_current_user_id(), 'phone_number', $phone );
+
+				return rest_ensure_response( array(
+					'success'      => true,
+					'phone_number' => $phone,
+				) );
+			},
+			'permission_callback' => function () {
+				return get_current_user_id() > 0;
+			},
+		),
+	) );
+
 	register_rest_field( 'user', 'partexhub_public_phone', array(
 		'get_callback' => function ( $user ) {
 			$user_id = isset( $user['id'] ) ? absint( $user['id'] ) : 0;
@@ -29,34 +63,3 @@ add_action( 'rest_api_init', function () {
 		),
 	) );
 } );
-
-/**
- * Keep the existing authenticated PartexHub profile endpoint compatible with
- * the JetEngine phone_number user-meta field.
- */
-add_filter( 'rest_request_after_callbacks', function ( $response, $handler, $request ) {
-	if ( '/partexhub/v1/profile' !== $request->get_route() || is_wp_error( $response ) ) {
-		return $response;
-	}
-
-	$user_id = get_current_user_id();
-	if ( ! $user_id ) {
-		return $response;
-	}
-
-	if ( in_array( $request->get_method(), array( 'POST', 'PUT', 'PATCH' ), true ) && null !== $request->get_param( 'phone_number' ) ) {
-		update_user_meta( $user_id, 'phone_number', sanitize_text_field( $request->get_param( 'phone_number' ) ) );
-	}
-
-	$response = rest_ensure_response( $response );
-	$data     = $response->get_data();
-
-	if ( is_array( $data ) ) {
-		$phone                = (string) get_user_meta( $user_id, 'phone_number', true );
-		$data['phone']        = $phone;
-		$data['phone_number'] = $phone;
-		$response->set_data( $data );
-	}
-
-	return $response;
-}, 10, 3 );
