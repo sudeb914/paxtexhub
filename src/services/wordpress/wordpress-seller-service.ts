@@ -25,7 +25,7 @@ async function profileImage(user: WordPressUser) {
 }
 
 export async function getPublicSellerBySlug(slug: string): Promise<PublicSellerProfile | null> {
-  const users = await getWordPressJson<WordPressUser[]>(`users?slug=${encodeURIComponent(slug)}&context=view`);
+  const users = await getWordPressJson<WordPressUser[]>(`users?slug=${encodeURIComponent(slug)}&context=view`, { cache: "no-store" });
   const user = users[0];
   if (!user) return null;
 

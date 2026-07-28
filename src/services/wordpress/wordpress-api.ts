@@ -11,8 +11,8 @@ export async function wordpressFetch(path: string, options?: { cache?: RequestCa
   return response;
 }
 
-export async function getWordPressJson<T>(path: string): Promise<T> {
-  const response = await wordpressFetch(path);
+export async function getWordPressJson<T>(path: string, options?: { cache?: RequestCache }): Promise<T> {
+  const response = await wordpressFetch(path, options);
   return response.json() as Promise<T>;
 }
 

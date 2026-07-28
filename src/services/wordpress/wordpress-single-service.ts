@@ -32,7 +32,7 @@ async function getSeller(post: WordPressCarListing): Promise<Seller | null> {
   const authorId = Number(post.author);
   if (!authorId) return null;
   try {
-    const user = await getWordPressJson<WordPressUser>(`users/${authorId}`);
+    const user = await getWordPressJson<WordPressUser>(`users/${authorId}`, { cache: "no-store" });
     const profilePictureId = Number(user.meta?.profile_picture);
     let avatarUrl = user.avatar_urls?.["96"] ?? "";
     if (Number.isInteger(profilePictureId) && profilePictureId > 0) {
