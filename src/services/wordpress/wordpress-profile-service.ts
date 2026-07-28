@@ -1,7 +1,7 @@
 import "server-only";
 import type { BusinessType, SellerProfileResponse } from "@/types/seller-profile";
 
-const META_KEYS = ["phone", "company_name", "business_type", "website", "bio", "country", "city", "zip_code", "street_address", "facebook", "instagram", "linkedin", "youtube", "email_notifications", "marketing_emails", "phone_number_public", "profile_picture"] as const;
+const META_KEYS = ["phone_number", "company_name", "business_type", "website", "bio", "country", "city", "zip_code", "street_address", "facebook", "instagram", "linkedin", "youtube", "email_notifications", "marketing_emails", "phone_number_public", "profile_picture"] as const;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -55,7 +55,7 @@ async function normalize(token: string, data: UnknownRecord): Promise<SellerProf
     id: typeof data.id === "number" ? data.id : 0,
     firstName: string(data.first_name ?? data.firstName), lastName: string(data.last_name ?? data.lastName),
     displayName: string(data.name ?? data.display_name ?? data.displayName), username: string(data.username), email: string(data.email),
-    phone: string(meta.phone ?? data.phone), companyName: string(meta.company_name ?? data.companyName),
+    phone: string(meta.phone_number ?? data.phone_number ?? meta.phone ?? data.phone), companyName: string(meta.company_name ?? data.companyName),
     businessType: (["car-dealer", "dealership", "broker"].includes(businessType) ? businessType : "") as BusinessType,
     website: string(meta.website ?? data.website ?? data.url), bio: string(meta.bio ?? data.bio ?? data.description),
     country: string(meta.country ?? data.country), city: string(meta.city ?? data.city), zipCode: string(meta.zip_code ?? data.zipCode), streetAddress: string(meta.street_address ?? data.streetAddress),
@@ -91,13 +91,13 @@ export interface ProfileUpdateInput {
 }
 
 export async function updateWordPressProfile(token: string, input: ProfileUpdateInput) {
-  const customPayload = { first_name: input.firstName, last_name: input.lastName, display_name: input.displayName, email: input.email, phone: input.phone, company_name: input.companyName, business_type: input.businessType, website: input.website, bio: input.bio, country: input.country, city: input.city, zip_code: input.zipCode, street_address: input.streetAddress, facebook: input.facebook, instagram: input.instagram, linkedin: input.linkedin, youtube: input.youtube, email_notifications: input.receiveNotifications ? "yes" : "no", marketing_emails: input.marketingEmails ? "yes" : "no", phone_number_public: input.publicPhone ? "yes" : "no", profile_picture: input.profilePhotoId ? String(input.profilePhotoId) : "" };
+  const customPayload = { first_name: input.firstName, last_name: input.lastName, display_name: input.displayName, email: input.email, phone_number: input.phone, company_name: input.companyName, business_type: input.businessType, website: input.website, bio: input.bio, country: input.country, city: input.city, zip_code: input.zipCode, street_address: input.streetAddress, facebook: input.facebook, instagram: input.instagram, linkedin: input.linkedin, youtube: input.youtube, email_notifications: input.receiveNotifications ? "yes" : "no", marketing_emails: input.marketingEmails ? "yes" : "no", phone_number_public: input.publicPhone ? "yes" : "no", profile_picture: input.profilePhotoId ? String(input.profilePhotoId) : "" };
   const custom = await request(token, `${baseUrl()}/wp-json/partexhub/v1/profile`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(customPayload) });
   if (custom.ok) return normalize(token, await custom.json() as UnknownRecord);
   if (custom.status !== 404) throw await errorFrom(custom);
 
   const meta: UnknownRecord = {};
-  for (const key of META_KEYS) if (key !== "phone") meta[key] = customPayload[key];
+  for (const key of META_KEYS) meta[key] = customPayload[key];
   const fallback = await request(token, `${baseUrl()}/wp-json/wp/v2/users/me`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ first_name: input.firstName, last_name: input.lastName, name: input.displayName, email: input.email, meta }) });
   if (!fallback.ok) throw await errorFrom(fallback);
   return normalize(token, await fallback.json() as UnknownRecord);

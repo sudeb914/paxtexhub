@@ -19,7 +19,7 @@ add_action( 'rest_api_init', function () {
 				return '';
 			}
 
-			return sanitize_text_field( get_user_meta( $user_id, 'phone', true ) );
+			return sanitize_text_field( get_user_meta( $user_id, 'phone_number', true ) );
 		},
 		'schema' => array(
 			'description' => 'Public seller phone number.',
@@ -29,3 +29,34 @@ add_action( 'rest_api_init', function () {
 		),
 	) );
 } );
+
+/**
+ * Keep the existing authenticated PartexHub profile endpoint compatible with
+ * the JetEngine phone_number user-meta field.
+ */
+add_filter( 'rest_request_after_callbacks', function ( $response, $handler, $request ) {
+	if ( '/partexhub/v1/profile' !== $request->get_route() || is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	$user_id = get_current_user_id();
+	if ( ! $user_id ) {
+		return $response;
+	}
+
+	if ( in_array( $request->get_method(), array( 'POST', 'PUT', 'PATCH' ), true ) && null !== $request->get_param( 'phone_number' ) ) {
+		update_user_meta( $user_id, 'phone_number', sanitize_text_field( $request->get_param( 'phone_number' ) ) );
+	}
+
+	$response = rest_ensure_response( $response );
+	$data     = $response->get_data();
+
+	if ( is_array( $data ) ) {
+		$phone                = (string) get_user_meta( $user_id, 'phone_number', true );
+		$data['phone']        = $phone;
+		$data['phone_number'] = $phone;
+		$response->set_data( $data );
+	}
+
+	return $response;
+}, 10, 3 );

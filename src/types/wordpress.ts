@@ -38,6 +38,7 @@ export interface WordPressUser {
     city?: string;
     website?: string;
     phone?: string;
+    phone_number?: string;
     phone_number_public?: string | boolean;
     facebook?: string;
     instagram?: string;

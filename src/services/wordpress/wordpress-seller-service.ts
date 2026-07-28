@@ -53,7 +53,7 @@ export async function getPublicSellerBySlug(slug: string): Promise<PublicSellerP
     bio: text(meta.bio) || text(user.description),
     location: [city, country].filter(Boolean).join(", "),
     website: text(meta.website) || text(user.url),
-    phone: text(user.partexhub_public_phone) || (isPublicPhone(meta.phone_number_public) ? text(meta.phone) : ""),
+    phone: text(user.partexhub_public_phone) || (isPublicPhone(meta.phone_number_public) ? text(meta.phone_number ?? meta.phone) : ""),
     socialLinks,
     cars: posts.map(adaptWordPressCar),
   };

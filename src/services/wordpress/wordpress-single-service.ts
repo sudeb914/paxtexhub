@@ -44,7 +44,7 @@ async function getSeller(post: WordPressCarListing): Promise<Seller | null> {
       }
     }
     const companyName = user.meta?.company_name?.trim();
-    const phone = text(user.partexhub_public_phone) || (isPublicPhone(user.meta?.phone_number_public) ? text(user.meta?.phone) : "");
+    const phone = text(user.partexhub_public_phone) || (isPublicPhone(user.meta?.phone_number_public) ? text(user.meta?.phone_number ?? user.meta?.phone) : "");
     return {
       id: String(user.id),
       name: user.name,
