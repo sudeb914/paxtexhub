@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { CarFront, CircleUserRound, LayoutGrid, LogOut, Mail, PlusSquare, Settings, X } from "lucide-react";
 import { MenuItem } from "@/components/dashboard/MenuItem";
 import { useLogout } from "@/hooks/use-logout";
+import { SidebarUnreadBadge } from "@/components/messages/SidebarUnreadBadge";
 
 const primaryItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -48,7 +49,7 @@ export function Sidebar({ open, compact, onClose }: { open: boolean; compact: bo
           </div>
 
           <nav aria-label="Seller dashboard" className="mt-[62px] space-y-3">
-            {primaryItems.map((item) => <MenuItem active={isActive(item.href)} compact={compact} key={item.href} onNavigate={onClose} {...item} />)}
+            {primaryItems.map((item) => <MenuItem active={isActive(item.href)} badge={item.href === "/dashboard/messages" ? <SidebarUnreadBadge compact={compact} /> : undefined} compact={compact} key={item.href} onNavigate={onClose} {...item} />)}
             <div className="my-4 h-px bg-[#e5e9ef]" />
             {accountItems.map((item) => <MenuItem active={isActive(item.href)} compact={compact} key={item.href} onNavigate={onClose} {...item} />)}
           </nav>

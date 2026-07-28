@@ -77,7 +77,7 @@ export default async function CarDetailsPage({ params }: { params: Params }) {
                   <h2 className="text-sm font-bold" id="description-heading">Description</h2>
                   <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted">{car.description}</p>
                 </section>
-                {seller ? <div className="pt-6"><SellerCard seller={seller} /></div> : <div className="pt-6"><Link className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-semibold text-white transition hover:bg-primary-hover" href="/contact">Contact About This Car</Link></div>}
+                {seller ? <div className="pt-6"><SellerCard listingId={Number(car.id)} seller={seller} /></div> : <div className="pt-6"><Link className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-semibold text-white transition hover:bg-primary-hover" href="/contact">Contact About This Car</Link></div>}
               </div>
             </div>
           </div>
