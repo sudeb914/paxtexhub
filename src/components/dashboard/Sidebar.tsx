@@ -27,7 +27,7 @@ export function Sidebar({ open, compact, onClose }: { open: boolean; compact: bo
     <>
       <button aria-label="Close sidebar" className={`fixed inset-0 z-40 bg-slate-950/25 backdrop-blur-[1px] transition-opacity lg:hidden ${open ? "opacity-100" : "pointer-events-none opacity-0"}`} onClick={onClose} type="button" />
       <aside className={`fixed inset-y-0 left-0 z-50 flex border-r border-[#edf0f4] bg-white transition-[width,transform] duration-300 ${compact ? "lg:w-24" : "lg:w-[342px]"} w-[300px] ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
-        <div className="flex min-w-0 flex-1 flex-col px-[18px] py-8 lg:py-[48px]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-[18px] py-8 lg:py-[48px]">
           <div className={`flex items-center ${compact ? "justify-center" : "px-3"}`}>
             <Link aria-label="AutoHub dashboard" className="flex items-center gap-4" href="/dashboard">
               <CarFront className="size-12 shrink-0 stroke-[1.7] text-[#0864ff]" aria-hidden="true" />
@@ -42,7 +42,7 @@ export function Sidebar({ open, compact, onClose }: { open: boolean; compact: bo
             {accountItems.map((item) => <MenuItem active={isActive(item.href)} compact={compact} key={item.href} onNavigate={onClose} {...item} />)}
           </nav>
 
-          <div className="mt-4 border-t border-[#e5e9ef] pt-5">
+          <div className="mt-auto border-t border-[#e5e9ef] pt-5">
             <button aria-label={compact ? "Logout" : undefined} className={`flex h-[58px] w-full items-center rounded-xl text-[#24334a] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 ${compact ? "justify-center" : "gap-6 px-5"}`} disabled={isLoggingOut} onClick={() => void logout()} title={compact ? "Logout" : undefined} type="button"><LogOut className="size-[26px] stroke-[1.8]" />{!compact ? <span className="text-[17px] font-medium">{isLoggingOut ? "Logging out..." : "Logout"}</span> : null}</button>
             {logoutError && !compact ? <p className="px-5 text-xs text-red-600" role="alert">{logoutError}</p> : null}
           </div>
