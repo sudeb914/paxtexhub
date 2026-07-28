@@ -47,57 +47,70 @@ html {
   background: color-mix(in srgb, var(--primary) 24%, white);
 }
 
-@keyframes autohub-loader-float {
-  0%, 100% { transform: translateY(0) rotate(-1deg); }
-  50% { transform: translateY(-6px) rotate(1deg); }
+@keyframes autohub-cube-turn {
+  0% { transform: rotateX(-18deg) rotateY(0deg) translateY(0); }
+  25% { transform: rotateX(-18deg) rotateY(90deg) translateY(-4px); }
+  50% { transform: rotateX(-18deg) rotateY(180deg) translateY(0); }
+  75% { transform: rotateX(-18deg) rotateY(270deg) translateY(-4px); }
+  100% { transform: rotateX(-18deg) rotateY(360deg) translateY(0); }
 }
 
-@keyframes autohub-loader-ring {
-  0% { opacity: 0.65; transform: scale(0.78); }
-  70%, 100% { opacity: 0; transform: scale(1.22); }
+@keyframes autohub-cube-shadow {
+  0%, 50%, 100% { opacity: .2; transform: translateX(-50%) scaleX(1); }
+  25%, 75% { opacity: .12; transform: translateX(-50%) scaleX(.72); }
 }
 
-@keyframes autohub-loader-progress {
-  0% { transform: translateX(-110%); }
-  55% { transform: translateX(90%); }
-  100% { transform: translateX(245%); }
+.autohub-cube-scene {
+  height: 82px;
+  perspective: 520px;
+  position: relative;
+  width: 82px;
 }
 
-@keyframes autohub-loader-dot {
-  0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
-  40% { opacity: 1; transform: translateY(-3px); }
+.autohub-cube {
+  animation: autohub-cube-turn 2.25s cubic-bezier(.65, 0, .35, 1) infinite;
+  height: 64px;
+  left: 9px;
+  position: absolute;
+  top: 0;
+  transform-style: preserve-3d;
+  width: 64px;
 }
 
-.autohub-loader-car {
-  animation: autohub-loader-float 1.8s ease-in-out infinite;
+.autohub-cube-face {
+  backface-visibility: hidden;
+  display: grid;
+  height: 64px;
+  place-items: center;
+  position: absolute;
+  width: 64px;
 }
 
-.autohub-loader-ring {
-  animation: autohub-loader-ring 1.8s ease-out infinite;
-}
+.autohub-cube-front { background: #0864ff; transform: translateZ(32px); }
+.autohub-cube-back { background: #063b9f; transform: rotateY(180deg) translateZ(32px); }
+.autohub-cube-right { background: #0753d5; transform: rotateY(90deg) translateZ(32px); }
+.autohub-cube-left { background: #0a73ff; transform: rotateY(-90deg) translateZ(32px); }
+.autohub-cube-top { background: #2d83ff; transform: rotateX(90deg) translateZ(32px); }
+.autohub-cube-bottom { background: #052d7a; transform: rotateX(-90deg) translateZ(32px); }
 
-.autohub-loader-ring-delay {
-  animation-delay: 0.45s;
+.autohub-cube-shadow {
+  animation: autohub-cube-shadow 2.25s ease-in-out infinite;
+  background: rgba(7, 17, 31, .22);
+  border-radius: 50%;
+  bottom: 0;
+  filter: blur(6px);
+  height: 8px;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 56px;
 }
-
-.autohub-loader-progress {
-  animation: autohub-loader-progress 1.5s cubic-bezier(.65, 0, .35, 1) infinite;
-}
-
-.autohub-loader-dot {
-  animation: autohub-loader-dot 1.2s ease-in-out infinite;
-}
-
-.autohub-loader-dot-delay-1 { animation-delay: 0.15s; }
-.autohub-loader-dot-delay-2 { animation-delay: 0.3s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .autohub-loader-car,
-  .autohub-loader-ring,
-  .autohub-loader-progress,
-  .autohub-loader-dot {
+  .autohub-cube,
+  .autohub-cube-shadow {
     animation: none;
   }
 
-  .autohub-loader-progress { transform: translateX(70%); }
+  .autohub-cube { transform: rotateX(-18deg) rotateY(35deg); }
 }
