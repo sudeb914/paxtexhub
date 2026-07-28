@@ -1,0 +1,31 @@
+/**
+ * Expose a seller's profile phone through the public users REST response only
+ * when the seller has enabled "Display Phone Number Publicly".
+ * Code Snippets: add as a PHP snippet and run everywhere.
+ */
+
+add_action( 'rest_api_init', function () {
+	register_rest_field( 'user', 'partexhub_public_phone', array(
+		'get_callback' => function ( $user ) {
+			$user_id = isset( $user['id'] ) ? absint( $user['id'] ) : 0;
+
+			if ( ! $user_id ) {
+				return '';
+			}
+
+			$is_public = (string) get_user_meta( $user_id, 'phone_number_public', true );
+
+			if ( ! in_array( $is_public, array( 'yes', '1', 'true' ), true ) ) {
+				return '';
+			}
+
+			return sanitize_text_field( get_user_meta( $user_id, 'phone', true ) );
+		},
+		'schema' => array(
+			'description' => 'Public seller phone number.',
+			'type'        => 'string',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
+		),
+	) );
+} );

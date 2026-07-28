@@ -28,6 +28,7 @@ export interface WordPressUser {
   description?: string;
   url?: string;
   avatar_urls?: Record<string, string>;
+  partexhub_public_phone?: string;
   meta?: {
     profile_picture?: string | number;
     company_name?: string;

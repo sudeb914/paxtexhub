@@ -4,6 +4,14 @@ import type { Car, CarImage } from "@/types/car";
 import type { Seller } from "@/types/user";
 import type { WordPressCarListing, WordPressMedia, WordPressUser } from "@/types/wordpress";
 
+function text(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isPublicPhone(value: unknown) {
+  return value === true || value === "true" || value === "yes" || value === "1";
+}
+
 function adaptMedia(media: WordPressMedia, fallbackTitle: string): CarImage {
   return {
     id: String(media.id),
@@ -36,12 +44,14 @@ async function getSeller(post: WordPressCarListing): Promise<Seller | null> {
       }
     }
     const companyName = user.meta?.company_name?.trim();
+    const phone = text(user.partexhub_public_phone) || (isPublicPhone(user.meta?.phone_number_public) ? text(user.meta?.phone) : "");
     return {
       id: String(user.id),
       name: user.name,
       avatarUrl,
       memberSince: "",
       subtitle: companyName || "Verified WordPress seller",
+      phone,
       profileUrl: `/sellers/${user.slug}`,
     };
   } catch {
