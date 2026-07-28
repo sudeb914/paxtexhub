@@ -1,7 +1,7 @@
 import "server-only";
 import type { BusinessType, SellerProfileResponse } from "@/types/seller-profile";
 
-const META_KEYS = ["phone", "company_name", "business_type", "website", "bio", "country", "city", "zip_code", "street_address", "facebook", "instagram", "linkedin", "youtube", "email_notifications", "marketing_emails", "phone_number_public", "profile_photo"] as const;
+const META_KEYS = ["phone", "company_name", "business_type", "website", "bio", "country", "city", "zip_code", "street_address", "facebook", "instagram", "linkedin", "youtube", "email_notifications", "marketing_emails", "phone_number_public", "profile_picture"] as const;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -48,7 +48,7 @@ async function resolvePhoto(token: string, id: number | null, directUrl: unknown
 
 async function normalize(token: string, data: UnknownRecord): Promise<SellerProfileResponse> {
   const meta = data.meta && typeof data.meta === "object" ? data.meta as UnknownRecord : data;
-  const photoValue = meta.profile_photo ?? data.profilePhotoId;
+  const photoValue = meta.profile_picture ?? data.profile_picture ?? meta.profile_photo ?? data.profilePhotoId;
   const photoId = mediaId(photoValue);
   const businessType = string(meta.business_type ?? data.businessType);
   return {
@@ -61,7 +61,7 @@ async function normalize(token: string, data: UnknownRecord): Promise<SellerProf
     country: string(meta.country ?? data.country), city: string(meta.city ?? data.city), zipCode: string(meta.zip_code ?? data.zipCode), streetAddress: string(meta.street_address ?? data.streetAddress),
     facebook: string(meta.facebook ?? data.facebook), instagram: string(meta.instagram ?? data.instagram), linkedin: string(meta.linkedin ?? data.linkedin), youtube: string(meta.youtube ?? data.youtube),
     receiveNotifications: yes(meta.email_notifications ?? data.emailNotifications), marketingEmails: yes(meta.marketing_emails ?? data.marketingEmails), publicPhone: yes(meta.phone_number_public ?? data.phoneNumberPublic),
-    profilePhotoId: photoId, profileImage: await resolvePhoto(token, photoId, data.profilePhotoUrl),
+    profilePhotoId: photoId, profileImage: await resolvePhoto(token, photoId, data.profilePictureUrl ?? data.profilePhotoUrl),
   };
 }
 
@@ -91,13 +91,13 @@ export interface ProfileUpdateInput {
 }
 
 export async function updateWordPressProfile(token: string, input: ProfileUpdateInput) {
-  const customPayload = { first_name: input.firstName, last_name: input.lastName, display_name: input.displayName, email: input.email, phone: input.phone, company_name: input.companyName, business_type: input.businessType, website: input.website, bio: input.bio, country: input.country, city: input.city, zip_code: input.zipCode, street_address: input.streetAddress, facebook: input.facebook, instagram: input.instagram, linkedin: input.linkedin, youtube: input.youtube, email_notifications: input.receiveNotifications ? "yes" : "no", marketing_emails: input.marketingEmails ? "yes" : "no", phone_number_public: input.publicPhone ? "yes" : "no", profile_photo: input.profilePhotoId ?? "" };
+  const customPayload = { first_name: input.firstName, last_name: input.lastName, display_name: input.displayName, email: input.email, phone: input.phone, company_name: input.companyName, business_type: input.businessType, website: input.website, bio: input.bio, country: input.country, city: input.city, zip_code: input.zipCode, street_address: input.streetAddress, facebook: input.facebook, instagram: input.instagram, linkedin: input.linkedin, youtube: input.youtube, email_notifications: input.receiveNotifications ? "yes" : "no", marketing_emails: input.marketingEmails ? "yes" : "no", phone_number_public: input.publicPhone ? "yes" : "no", profile_picture: input.profilePhotoId ?? "" };
   const custom = await request(token, `${baseUrl()}/wp-json/partexhub/v1/profile`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(customPayload) });
   if (custom.ok) return normalize(token, await custom.json() as UnknownRecord);
   if (custom.status !== 404) throw await errorFrom(custom);
 
   const meta: UnknownRecord = {};
-  for (const key of META_KEYS) if (key !== "phone" && key !== "profile_photo") meta[key] = customPayload[key];
+  for (const key of META_KEYS) if (key !== "phone") meta[key] = customPayload[key];
   const fallback = await request(token, `${baseUrl()}/wp-json/wp/v2/users/me`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ first_name: input.firstName, last_name: input.lastName, name: input.displayName, email: input.email, meta }) });
   if (!fallback.ok) throw await errorFrom(fallback);
   return normalize(token, await fallback.json() as UnknownRecord);

@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   try { formData = await request.formData(); } catch { return NextResponse.json({ error: "Invalid upload." }, { status: 400 }); }
   const file = formData.get("photo");
   if (!(file instanceof File) || !file.size) return NextResponse.json({ error: "Choose a profile photo." }, { status: 400 });
-  if (!allowed.has(file.type)) return NextResponse.json({ error: "Choose a JPG, PNG, or WebP image." }, { status: 400 });
+  if (!allowed.has(file.type)) return NextResponse.json({ error: "Choose a JPG, JPEG, PNG, or WebP image." }, { status: 400 });
   if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: "Profile photo must be 5 MB or smaller." }, { status: 400 });
   try {
     const id = await uploadAuthenticatedWordPressImage(token, file, "Seller profile photo");

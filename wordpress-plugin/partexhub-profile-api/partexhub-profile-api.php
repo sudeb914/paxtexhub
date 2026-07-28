@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PartexHub Seller Profile API
  * Description: Secure current-user profile REST endpoints for the AutoHub frontend.
- * Version: 1.2.0
+ * Version: 1.3.0
  * Author: PartexHub
  */
 
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 const PARTEXHUB_PROFILE_META = array(
 	'phone', 'company_name', 'business_type', 'website', 'bio', 'country', 'city',
 	'zip_code', 'street_address', 'facebook', 'instagram', 'linkedin', 'youtube',
-	'email_notifications', 'marketing_emails', 'phone_number_public', 'profile_photo',
+	'email_notifications', 'marketing_emails', 'phone_number_public', 'profile_picture',
 );
 
 add_action( 'init', function () {
@@ -124,7 +124,8 @@ function partexhub_update_owned_listing( WP_REST_Request $request ) {
 
 function partexhub_profile_payload( $user_id ) {
 	$user = get_userdata( $user_id );
-	$photo_id = absint( get_user_meta( $user_id, 'profile_photo', true ) );
+	$photo_id = absint( get_user_meta( $user_id, 'profile_picture', true ) );
+	if ( ! $photo_id ) $photo_id = absint( get_user_meta( $user_id, 'profile_photo', true ) );
 	return array(
 		'id' => $user_id,
 		'username' => $user->user_login,
@@ -148,8 +149,8 @@ function partexhub_profile_payload( $user_id ) {
 		'email_notifications' => (string) get_user_meta( $user_id, 'email_notifications', true ),
 		'marketing_emails' => (string) get_user_meta( $user_id, 'marketing_emails', true ),
 		'phone_number_public' => (string) get_user_meta( $user_id, 'phone_number_public', true ),
-		'profile_photo' => $photo_id ?: '',
-		'profilePhotoUrl' => $photo_id ? wp_get_attachment_image_url( $photo_id, 'full' ) : '',
+		'profile_picture' => $photo_id ?: '',
+		'profilePictureUrl' => $photo_id ? wp_get_attachment_image_url( $photo_id, 'full' ) : '',
 	);
 }
 
@@ -191,9 +192,9 @@ function partexhub_update_profile( WP_REST_Request $request ) {
 		$value = $request->get_param( $key );
 		update_user_meta( $user_id, $key, 'yes' === $value ? 'yes' : 'no' );
 	}
-	$photo_id = absint( $request->get_param( 'profile_photo' ) );
+	$photo_id = absint( $request->get_param( 'profile_picture' ) );
 	if ( $photo_id && 'attachment' !== get_post_type( $photo_id ) ) return new WP_Error( 'invalid_profile_photo', 'Invalid profile photo.', array( 'status' => 400 ) );
-	update_user_meta( $user_id, 'profile_photo', $photo_id ?: '' );
+	update_user_meta( $user_id, 'profile_picture', $photo_id ?: '' );
 
 	return rest_ensure_response( partexhub_profile_payload( $user_id ) );
 }
