@@ -21,16 +21,27 @@ async function getGallery(post: WordPressCarListing, car: Car): Promise<CarImage
 }
 
 async function getSeller(post: WordPressCarListing): Promise<Seller | null> {
-  const authorId = post._embedded?.["wp:featuredmedia"]?.[0]?.author;
+  const authorId = Number(post.author);
   if (!authorId) return null;
   try {
     const user = await getWordPressJson<WordPressUser>(`users/${authorId}`);
+    const profilePictureId = Number(user.meta?.profile_picture);
+    let avatarUrl = user.avatar_urls?.["96"] ?? "";
+    if (Number.isInteger(profilePictureId) && profilePictureId > 0) {
+      try {
+        const profilePicture = await getWordPressJson<WordPressMedia>(`media/${profilePictureId}`);
+        avatarUrl = profilePicture.media_details?.sizes?.thumbnail?.source_url ?? profilePicture.source_url;
+      } catch {
+        // Keep the WordPress avatar as a safe fallback when profile media is unavailable.
+      }
+    }
+    const companyName = user.meta?.company_name?.trim();
     return {
       id: String(user.id),
       name: user.name,
-      avatarUrl: user.avatar_urls?.["96"] ?? "/images/sellers/john-doe.jpg",
+      avatarUrl,
       memberSince: "",
-      subtitle: "Verified WordPress seller",
+      subtitle: companyName || "Verified WordPress seller",
       profileUrl: user.link,
     };
   } catch {

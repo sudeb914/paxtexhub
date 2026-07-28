@@ -26,6 +26,12 @@ export interface WordPressUser {
   link: string;
   slug: string;
   avatar_urls?: Record<string, string>;
+  meta?: {
+    profile_picture?: string | number;
+    company_name?: string;
+    business_type?: string;
+    bio?: string;
+  };
 }
 
 export interface WordPressCarListing {
