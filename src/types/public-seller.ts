@@ -11,6 +11,7 @@ export interface PublicSellerProfile {
   location: string;
   website: string;
   phone: string;
+  phoneIsPublic: boolean;
   socialLinks: Array<{ label: string; url: string }>;
   cars: Car[];
 }

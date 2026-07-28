@@ -62,4 +62,28 @@ add_action( 'rest_api_init', function () {
 			'readonly'    => true,
 		),
 	) );
+
+	register_rest_field( 'user', 'partexhub_phone_display', array(
+		'get_callback' => function ( $user ) {
+			$user_id = isset( $user['id'] ) ? absint( $user['id'] ) : 0;
+			if ( ! $user_id ) return '';
+
+			$phone = sanitize_text_field( get_user_meta( $user_id, 'phone_number', true ) );
+			if ( ! $phone ) return '';
+
+			$is_public = (string) get_user_meta( $user_id, 'phone_number_public', true );
+			if ( in_array( $is_public, array( 'yes', '1', 'true' ), true ) ) return $phone;
+
+			$digits = preg_replace( '/\D/', '', $phone );
+			if ( ! $digits ) return '';
+			$visible_digits = substr( $digits, -4 );
+			return str_repeat( '*', max( 3, strlen( $digits ) - strlen( $visible_digits ) ) ) . $visible_digits;
+		},
+		'schema' => array(
+			'description' => 'Public or safely masked seller phone number.',
+			'type'        => 'string',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
+		),
+	) );
 } );
