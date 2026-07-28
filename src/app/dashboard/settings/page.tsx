@@ -1,5 +1,8 @@
-import { ComingSoonPage } from "@/components/shared/coming-soon-page";
+import type { Metadata } from "next";
+import { SettingsPage } from "@/components/dashboard/SettingsPage";
 
-export default function SettingsPage() {
-  return <ComingSoonPage eyebrow="Seller" title="Settings" />;
+export const metadata: Metadata = { title: "Account Settings" };
+
+export default function SellerSettingsPage() {
+  return <SettingsPage />;
 }
