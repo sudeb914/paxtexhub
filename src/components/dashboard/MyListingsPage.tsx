@@ -59,7 +59,7 @@ export function MyListingsPage() {
 }
 
 function ListingTableHeader() {
-  return <div className="hidden grid-cols-[minmax(270px,1.7fr)_minmax(105px,.7fr)_minmax(100px,.65fr)_minmax(115px,.8fr)_auto] gap-4 border-b border-[#e8ebef] bg-[#fbfcfd] px-7 py-4 text-xs font-semibold uppercase tracking-[0.06em] text-[#7a889c] lg:grid"><span>Vehicle</span><span>Price</span><span>Status</span><span>Created</span><span className="text-right">Actions</span></div>;
+  return <div className="hidden grid-cols-[minmax(220px,1.7fr)_minmax(100px,.7fr)_minmax(100px,.65fr)_minmax(115px,.8fr)_190px] items-center gap-4 border-b border-[#e8ebef] bg-[#fbfcfd] px-7 py-4 text-xs font-semibold uppercase tracking-[0.06em] text-[#7a889c] lg:grid xl:grid-cols-[minmax(270px,1.7fr)_minmax(105px,.7fr)_minmax(100px,.65fr)_minmax(115px,.8fr)_300px]"><span>Vehicle</span><span>Price</span><span>Status</span><span>Created</span><span className="text-right">Actions</span></div>;
 }
 
 function ListingsLoadingState() {

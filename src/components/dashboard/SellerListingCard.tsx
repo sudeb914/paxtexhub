@@ -20,7 +20,7 @@ function formatPrice(listing: SellerListing) {
 
 export function SellerListingCard({ listing, onDeleted }: { listing: SellerListing; onDeleted: () => void }) {
   return (
-    <article className="grid gap-5 border-b border-[#e8ebef] px-5 py-5 last:border-b-0 sm:px-6 lg:grid-cols-[minmax(270px,1.7fr)_minmax(105px,.7fr)_minmax(100px,.65fr)_minmax(115px,.8fr)_auto] lg:items-center lg:gap-4 lg:px-7">
+    <article className="grid gap-5 border-b border-[#e8ebef] px-5 py-5 last:border-b-0 sm:px-6 lg:grid-cols-[minmax(220px,1.7fr)_minmax(100px,.7fr)_minmax(100px,.65fr)_minmax(115px,.8fr)_190px] lg:items-center lg:gap-4 lg:px-7 xl:grid-cols-[minmax(270px,1.7fr)_minmax(105px,.7fr)_minmax(100px,.65fr)_minmax(115px,.8fr)_300px]">
       <div className="flex min-w-0 items-center gap-4">
         <div className="relative h-[78px] w-[112px] shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:w-[124px]"><Image alt={listing.imageAlt} className="object-cover" fill sizes="124px" src={listing.featuredImage} /></div>
         <div className="min-w-0"><h2 className="truncate text-[16px] font-bold tracking-[-0.015em] text-[#111b2d]">{listing.title}</h2><p className="mt-2 text-sm font-semibold text-[#0864ff] lg:hidden">{formatPrice(listing)}</p></div>
